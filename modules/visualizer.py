@@ -1,5 +1,6 @@
 import streamlit as st
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 import seaborn as sns
 import pandas as pd
 import io
@@ -17,17 +18,21 @@ def download_chart(fig, filename):
 
 def visualize_data(df):
     st.subheader("Data Visualization")
-
     numeric_cols = [
         col for col in df.select_dtypes(include="number").columns.tolist()
-        if df[col].nunique() < len(df)
+        if not (df[col].nunique() == len(df) and df[col].nunique() > 100)
+    ]
+    numeric_cols = df.select_dtypes(include="number").columns.tolist()
+    numeric_cols = [
+        col for col in df.select_dtypes(include="number").columns.tolist()
+        if not pd.api.types.is_datetime64_any_dtype(df[col])
     ]
     categorical_cols = [
         col for col in df.select_dtypes(include="object").columns.tolist()
         if df[col].nunique() <= 20
     ]
-    datetime_cols = df.select_dtypes(include="datetime").columns.tolist()
-
+    datetime_cols = [col for col in df.columns if pd.api.types.is_datetime64_any_dtype(df[col])]
+    
     if not numeric_cols and not categorical_cols and not datetime_cols:
         st.warning("No columns available for visualization.")
         return
@@ -78,11 +83,12 @@ def visualize_data(df):
         if chart_type == "Bar Chart":
             fig, ax = plt.subplots()
             counts = df[selected_col].value_counts()
-            counts.plot(kind="bar", ax=ax, color="steelblue")
+            bars = counts.plot(kind="bar", ax=ax, color="steelblue")
             ax.set_title(f"Bar Chart of {selected_col}")
             ax.set_xlabel(selected_col)
             ax.set_ylabel("Count")
             plt.xticks(rotation=45)
+            ax.bar_label(ax.containers[0], fmt="%d")
             handles = [plt.Line2D([0], [0], color="steelblue", lw=4, label=selected_col)]
             ax.legend(handles=handles)
             st.pyplot(fig)
@@ -105,7 +111,7 @@ def visualize_data(df):
             download_chart(fig, f"piechart_{selected_col}.png")
             plt.close(fig)
 
-    elif selected_col in datetime_cols:
+    if selected_col in datetime_cols:
         chart_type = st.selectbox("Chart Type", ["Line Chart", "Area Chart"])
         data_over_time = df.set_index(selected_col).resample("ME").size()
 
@@ -130,6 +136,79 @@ def visualize_data(df):
             st.pyplot(fig)
             download_chart(fig, f"areachart_{selected_col}.png")
             plt.close(fig)
+
+    # --- Numeric vs Categorical ---
+    if numeric_cols and categorical_cols:
+        st.markdown("---")
+        st.markdown("#### Numeric vs Categorical")
+        num_col = st.selectbox("Numeric column", numeric_cols, key="num_cat_num")
+        cat_col = st.selectbox("Categorical column", categorical_cols, key="num_cat_cat")
+        chart_type2 = st.selectbox("Chart Type", ["Grouped Bar Chart", "Violin by Category"], key="num_cat_chart")
+
+        if chart_type2 == "Grouped Bar Chart":
+            fig, ax = plt.subplots(figsize=(10, 5))
+            grouped = df.groupby(cat_col)[num_col].mean()
+            grouped.plot(kind="bar", ax=ax, color=sns.color_palette("Set2", len(grouped)))
+            ax.set_title(f"Average {num_col} by {cat_col}")
+            ax.set_xlabel(cat_col)
+            ax.set_ylabel(f"Average {num_col}")
+            plt.xticks(rotation=45)
+            ax.bar_label(ax.containers[0], fmt="%.2f")
+            palette = sns.color_palette("Set2", len(grouped))
+            handles = [mpatches.Patch(color=palette[i], label=cat)
+                       for i, cat in enumerate(grouped.index)]
+        #    for i, cat in enumerate(grouped.index)]
+            st.pyplot(fig)
+            download_chart(fig, f"groupedbar_{num_col}_by_{cat_col}.png")
+            plt.close(fig)
+
+        elif chart_type2 == "Violin by Category":
+            fig, ax = plt.subplots(figsize=(10, 5))
+            sns.violinplot(x=df[cat_col], y=df[num_col], ax=ax, palette="Set2")
+            ax.set_title(f"{num_col} by {cat_col}")
+            ax.set_xlabel(cat_col)
+            ax.set_ylabel(num_col)
+            palette = sns.color_palette("Set2", len(df[cat_col].unique()))
+            handles = [mpatches.Patch(color=palette[i], label=cat)
+                       for i, cat in enumerate(df[cat_col].unique())]
+        #    for i, cat in enumerate(df[cat_col].unique())]
+            plt.xticks(rotation=45)
+            st.pyplot(fig)
+            download_chart(fig, f"violin_{num_col}_by_{cat_col}.png")
+            plt.close(fig)
+
+    # --- Two Numerics ---
+    if len(numeric_cols) >= 2:
+        st.markdown("---")
+        st.markdown("#### Two Numeric Columns")
+        col1 = st.selectbox("X axis", numeric_cols, key="x_col")
+        col2 = st.selectbox("Y axis", numeric_cols, key="y_col")
+        chart_type3 = st.selectbox("Chart Type", ["Regression Plot"], key="two_num_chart")
+        if col1 != col2:
+                fig, ax = plt.subplots()
+                sns.regplot(x=df[col1], y=df[col2], ax=ax, color="steelblue",
+                            line_kws={"color": "red", "label": "Regression Line"},
+                            scatter_kws={"label": f"{col1} vs {col2}"})
+                ax.set_title(f"Regression Plot: {col1} vs {col2}")
+                ax.set_xlabel(col1)
+                ax.set_ylabel(col2)
+                ax.legend()
+                st.pyplot(fig)
+                download_chart(fig, f"regression_{col1}_vs_{col2}.png")
+                plt.close(fig)
+        else:
+            st.warning("Please select two different columns.")
+
+    # --- Correlation Heatmap ---
+    if len(numeric_cols) >= 2:
+        st.markdown("---")
+        st.markdown("#### Correlation Heatmap")
+        fig, ax = plt.subplots(figsize=(10, 6))
+        sns.heatmap(df[numeric_cols].corr(), annot=True, fmt=".2f", cmap="coolwarm", ax=ax)
+        ax.set_title("Correlation Heatmap")
+        st.pyplot(fig)
+        download_chart(fig, "correlation_heatmap.png")
+        plt.close(fig)
 
     
 

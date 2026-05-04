@@ -13,8 +13,8 @@ st.set_page_config(
 )
 
 # --- Header ---
-st.title("🍇 DataVine")
-st.markdown("*A data platform for cleaning, exploring, and visualizing your datasets — automatically.*")
+st.title(" DataVine")
+st.markdown("*A data platform for cleaning, exploring, visualizing and automatically drawing insights from your datasets.*")
 st.divider()
 
 # --- File Upload ---

@@ -14,12 +14,22 @@ def clean_data(df):
     else:
         report.append("✅ No duplicate rows found.")
 
+    # --- Drop Identifier Columns ---
+    identifier_keywords = ["phone", "email", "address", "name", "code", "id", "url", "zip", "postcode"]
+    identifier_cols = [
+        col for col in df.columns
+        if any(keyword in col.lower() for keyword in identifier_keywords)
+    ]
+    if identifier_cols:
+        df = df.drop(columns=identifier_cols)
+        report.append(f"✅ Dropped identifier columns: {identifier_cols}")
+
     # --- Drop ID / High Cardinality Columns ---
     cols_to_drop = []
     for col in df.columns:
         if df[col].nunique() == len(df) and df[col].dtype == "object":
             cols_to_drop.append(col)
-        elif df[col].nunique() == len(df) and pd.api.types.is_integer_dtype(df[col]):
+        elif df[col].nunique() == len(df) and pd.api.types.is_integer_dtype(df[col]) and len(df) > 100:
             cols_to_drop.append(col)
     if cols_to_drop:
         df = df.drop(columns=cols_to_drop)
@@ -28,14 +38,13 @@ def clean_data(df):
     # --- Fix Data Types ---
     for col in df.columns:
         if df[col].dtype == "object":
-            # Try datetime first
             try:
-                df[col] = pd.to_datetime(df[col])
+                converted = pd.to_datetime(df[col])
+                df[col] = converted
                 report.append(f"✅ Converted '{col}' to datetime.")
                 continue
             except:
                 pass
-            # Try numeric
             try:
                 df[col] = pd.to_numeric(df[col])
                 report.append(f"✅ Converted '{col}' to numeric.")
@@ -44,18 +53,16 @@ def clean_data(df):
                 pass
 
     # --- Handle Missing Values ---
-    numeric_cols = df.select_dtypes(include="number").columns.tolist()
-    categorical_cols = df.select_dtypes(include="object").columns.tolist()
-
-    for col in numeric_cols:
+    for col in df.columns:
         missing = df[col].isnull().sum()
-        if missing > 0:
+        if missing == 0:
+            continue
+        if pd.api.types.is_datetime64_any_dtype(df[col]):
+            continue
+        elif pd.api.types.is_numeric_dtype(df[col]):
             df[col] = df[col].fillna(df[col].median())
-            report.append(f"✅ Filled {missing} missing values in '{col}' with median ({df[col].median():.2f}).")
-
-    for col in categorical_cols:
-        missing = df[col].isnull().sum()
-        if missing > 0:
+            report.append(f"✅ Filled {missing} missing values in '{col}' with median.")
+        elif df[col].dtype == "object":
             mode_val = df[col].mode()[0]
             df[col] = df[col].fillna(mode_val)
             report.append(f"✅ Filled {missing} missing values in '{col}' with mode ('{mode_val}').")
