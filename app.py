@@ -8,7 +8,7 @@ from modules.visualizer import visualize_data
 # --- Page Config ---
 st.set_page_config(
     page_title="DataVine",
-    page_icon="🍇",
+    page_icon="🧬",
     layout="wide"
 )
 
