@@ -148,19 +148,23 @@ def show_clustering_results(model, model_type, X_scaled, X_original, feature_col
 
     # --- PCA Visualization ---
     st.markdown("#### Cluster Visualization (PCA)")
-    pca = PCA(n_components=2)
-    X_pca = pca.fit_transform(X_scaled)
+    n_components = min(2, X_scaled.shape[1])
+    if n_components < 2:
+        st.info("Need at least 2 features for PCA visualization.")
+    else:
+        pca = PCA(n_components=2)
+        X_pca = pca.fit_transform(X_scaled)
 
-    fig, ax = plt.subplots(figsize=(10, 6))
-    scatter = ax.scatter(X_pca[:, 0], X_pca[:, 1],
-                         c=labels, cmap="Set2", alpha=0.6)
-    plt.colorbar(scatter, ax=ax, label="Cluster")
-    ax.set_title("Cluster Visualization (PCA)")
-    ax.set_xlabel("Principal Component 1")
-    ax.set_ylabel("Principal Component 2")
-    st.pyplot(fig)
-    download_chart(fig, "cluster_pca.png")
-    plt.close(fig)
+        fig, ax = plt.subplots(figsize=(10, 6))
+        scatter = ax.scatter(X_pca[:, 0], X_pca[:, 1],
+                             c=labels, cmap="Set2", alpha=0.6)
+        plt.colorbar(scatter, ax=ax, label="Cluster")
+        ax.set_title("Cluster Visualization (PCA)")
+        ax.set_xlabel("Principal Component 1")
+        ax.set_ylabel("Principal Component 2")
+        st.pyplot(fig)
+        download_chart(fig, "cluster_pca.png")
+        plt.close(fig)
 
     # --- Cluster Summary ---
     st.markdown("#### Cluster Summary")
