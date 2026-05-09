@@ -4,6 +4,7 @@ from modules.loader import load_data
 from modules.inspector import inspect_data
 from modules.cleaner import clean_data
 from modules.visualizer import visualize_data
+from modules.trainer import train_model
 
 # --- Page Config ---
 st.set_page_config(
@@ -33,7 +34,7 @@ if uploaded_file is not None:
     if df_raw is not None:
         st.session_state.df_raw = df_raw
 
-        tab1, tab2, tab3 = st.tabs(["🔍 Inspect", "🧹 Clean", "📊 Visualize"])
+        tab1, tab2, tab3, tab4 = st.tabs(["🔍 Inspect", "🧹 Clean", "📊 Visualize", "🤖 Train"])
 
         with tab1:
             inspect_data(df_raw)
@@ -56,6 +57,12 @@ if uploaded_file is not None:
                 visualize_data(st.session_state.df_clean)
             else:
                 st.info("Please go to the Clean tab first before visualizing.")
+
+        with tab4:
+            if st.session_state.df_clean is not None:
+                train_model(st.session_state.df_clean)
+            else:
+                st.info("Please go to the Clean tab first before training.")
 
 else:
     st.info("📂 Upload a CSV or Excel file above to get started.")
