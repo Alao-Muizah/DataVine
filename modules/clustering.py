@@ -227,7 +227,8 @@ def clustering_trainer(df):
         return
 
     st.markdown("#### Hyperparameters")
-    params = get_clustering_params(model_type
+    params = get_clustering_params(model_type)
+
 
     if st.button("Run Clustering", key="train_clu"):
         X = df[feature_cols].dropna()
@@ -253,7 +254,4 @@ def clustering_trainer(df):
         show_clustering_results(model, model_type, X_scaled, X.copy(), list(X.columns), params)
 
     
-
-
-
-        
+  
