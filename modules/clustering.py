@@ -206,8 +206,11 @@ def clustering_trainer(df):
         le = LabelEncoder()
         df[col] = le.fit_transform(df[col].astype(str))
 
-    numeric_cols = [col for col in df.select_dtypes(include="number").columns
-                    if not pd.api.types.is_datetime64_any_dtype(df[col])]
+    # --- Drop datetime columns ---
+    datetime_cols = [col for col in df.columns if pd.api.types.is_datetime64_any_dtype(df[col])]
+    df = df.drop(columns=datetime_cols)
+
+    numeric_cols = [col for col in df.select_dtypes(include="number").columns]
 
     if len(numeric_cols) < 2:
         st.warning("Need at least 2 numeric columns for clustering.")
@@ -229,6 +232,9 @@ def clustering_trainer(df):
     if st.button("Run Clustering", key="train_clu"):
         X = df[feature_cols].dropna()
 
+        # Final check — ensure all columns are numeric
+        X = X.select_dtypes(include="number")
+
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
 
@@ -236,6 +242,8 @@ def clustering_trainer(df):
         model.fit(X_scaled)
 
         show_clustering_results(model, model_type, X_scaled, X.copy(), feature_cols, params)
+        
+
 
 
 
