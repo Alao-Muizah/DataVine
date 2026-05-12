@@ -227,13 +227,22 @@ def clustering_trainer(df):
         return
 
     st.markdown("#### Hyperparameters")
-    params = get_clustering_params(model_type)
+    params = get_clustering_params(model_type
 
     if st.button("Run Clustering", key="train_clu"):
         X = df[feature_cols].dropna()
-
-        # Final check — ensure all columns are numeric
         X = X.select_dtypes(include="number")
+        
+        # Convert to float explicitly
+        try:
+            X = X.astype(float)
+        except Exception as e:
+            st.error(f"Could not convert all selected columns to numeric: {e}")
+            return
+
+        if X.shape[1] < 2:
+            st.warning("Need at least 2 numeric columns after processing.")
+            return
 
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
@@ -241,11 +250,9 @@ def clustering_trainer(df):
         model = get_clustering_model(model_type, params)
         model.fit(X_scaled)
 
-        show_clustering_results(model, model_type, X_scaled, X.copy(), feature_cols, params)
-        
+        show_clustering_results(model, model_type, X_scaled, X.copy(), list(X.columns), params)
 
-
-
+    
 
 
 
