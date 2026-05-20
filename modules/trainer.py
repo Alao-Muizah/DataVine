@@ -21,19 +21,11 @@ def train_model(df):
         if st.button("Select", key="clf", use_container_width=True):
             st.session_state.task = "Classification"
 
-    col3, col4 = st.columns(2)
+    st.markdown("**🔵 Clustering**")
+    st.caption("Group similar data")
+    if st.button("Select", key="clu", use_container_width=True):
+        st.session_state.task = "Clustering"
 
-    with col3:
-        st.markdown("**🔵 Clustering**")
-        st.caption("Group similar data")
-        if st.button("Select", key="clu", use_container_width=True):
-            st.session_state.task = "Clustering"
-
-    with col4:
-        st.markdown("**📅 Time Series**")
-        st.caption("Forecast trends over time")
-        if st.button("Select", key="ts", use_container_width=True):
-            st.session_state.task = "Time Series"
 
 
     if "task" not in st.session_state:
@@ -49,6 +41,5 @@ def train_model(df):
         classification_trainer(df)
     elif st.session_state.task == "Clustering":
         clustering_trainer(df)
-    elif st.session_state.task == "Time Series":
-        st.info("Time Series coming soon.")
+    
      
