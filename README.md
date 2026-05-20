@@ -1,6 +1,6 @@
 # DataVine
 
-DataVine is a web-based data platform that lets you upload, clean, visualize, and run machine learning models on your data — all in one place, without writing a single line of code.
+DataVine is a web-based data platform that lets you upload, clean, visualize, and run machine learning models on your data — all in one place, without writing a single line of code. [View app here](https://datavine-haziumxyzqr.streamlit.app/)
 
 ## Features
 
@@ -11,6 +11,3 @@ DataVine is a web-based data platform that lets you upload, clean, visualize, an
 - **Model Training** — Train regression, classification, and clustering models on your cleaned data
 - **Results Export** — Download cleaned datasets and model outputs
 
-## Status
-
-Currently in development.
