@@ -216,4 +216,4 @@ def clean_data(df):
             mime="text/csv"
         )
 
-    return st.session_state.get("df_clean", df)
+    return df
