@@ -31,11 +31,30 @@ def visualize_data(df):
         col for col in df.select_dtypes(include="object").columns.tolist()
         if df[col].nunique() <= 20
     ]
-    datetime_cols = [col for col in df.columns if pd.api.types.is_datetime64_any_dtype(df[col])]
-    
-    if not numeric_cols and not categorical_cols and not datetime_cols:
-        st.warning("No columns available for visualization.")
-        return
+    datetime_cols = []
+
+    for col in df.columns:
+
+        # already datetime
+        if pd.api.types.is_datetime64_any_dtype(df[col]):
+            datetime_cols.append(col)
+            continue
+
+        # only try for object/string columns
+        if pd.api.types.is_object_dtype(df[col]) or pd.api.types.is_string_dtype(df[col]):
+
+            try:
+                converted = pd.to_datetime(df[col], errors="coerce", infer_datetime_format=True)
+
+                success_ratio = converted.notna().mean()
+
+                # LOWER threshold (important fix)
+                if success_ratio > 0.3:
+                    df[col] = converted   # actually convert it
+                    datetime_cols.append(col)
+
+            except Exception:
+                pass
 
     # --- Single Column Charts ---
     st.markdown("#### Single Column")
