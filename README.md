@@ -1,4 +1,4 @@
-# 🧬 DataVine
+#  DataVine
 
 > An end-to-end data platform for cleaning, exploring, visualizing, and modeling your datasets — no code required.
 
