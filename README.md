@@ -146,7 +146,7 @@ DataVine/
 
 ## Status
 
-🚧 Active development — v1.0
+Active development — v1.0
 
 ---
 
