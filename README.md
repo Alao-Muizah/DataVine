@@ -2,7 +2,7 @@
 
 > An end-to-end data platform for cleaning, exploring, visualizing, and modeling your datasets — no code required.
 
-[[Access Streamlit App]](https://datavine-haziumxyzqr.streamlit.app)
+[![Streamlit App](https://img.shields.io/badge/Streamlit-Live%20Demo-FF4B4B?logo=streamlit&logoColor=white)](https://datavine-haziumxyzqr.streamlit.app)
 
 ---
 
