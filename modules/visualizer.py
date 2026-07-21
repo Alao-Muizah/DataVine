@@ -4,6 +4,7 @@ import matplotlib.patches as mpatches
 import seaborn as sns
 import pandas as pd
 import io
+from modules.summarizer import summarize_visuals, stats_corr_matrix, stats_categorical, stats_grouped, stats_numeric, stats_time, stats_two_numeric
 
 def download_chart(fig, filename):
     buf = io.BytesIO()
@@ -29,32 +30,12 @@ def visualize_data(df):
     ]
     categorical_cols = [
         col for col in df.select_dtypes(include="object").columns.tolist()
-        if df[col].nunique() <= 20
     ]
-    datetime_cols = []
-
-    for col in df.columns:
-
-        # already datetime
-        if pd.api.types.is_datetime64_any_dtype(df[col]):
-            datetime_cols.append(col)
-            continue
-
-        # only try for object/string columns
-        if pd.api.types.is_object_dtype(df[col]) or pd.api.types.is_string_dtype(df[col]):
-
-            try:
-                converted = pd.to_datetime(df[col], errors="coerce", infer_datetime_format=True)
-
-                success_ratio = converted.notna().mean()
-
-                # LOWER threshold (important fix)
-                if success_ratio > 0.3:
-                    df[col] = converted   # actually convert it
-                    datetime_cols.append(col)
-
-            except Exception:
-                pass
+    datetime_cols = [col for col in df.columns if pd.api.types.is_datetime64_any_dtype(df[col])]
+    
+    if not numeric_cols and not categorical_cols and not datetime_cols:
+        st.warning("No columns available for visualization.")
+        return
 
     # --- Single Column Charts ---
     st.markdown("#### Single Column")
@@ -74,6 +55,14 @@ def visualize_data(df):
             download_chart(fig, f"histogram_{selected_col}.png")
             plt.close(fig)
 
+            insight = summarize_visuals(
+                "Histogram",
+                stats_numeric(df[selected_col]),
+                st.session_state.dataset_summary,
+                st.session_state.global_stats
+            )
+            st.info(insight)
+
         elif chart_type == "Box Plot":
             fig, ax = plt.subplots()
             sns.boxplot(y=df[selected_col].dropna(), ax=ax, color="lightblue")
@@ -84,6 +73,14 @@ def visualize_data(df):
             st.pyplot(fig)
             download_chart(fig, f"boxplot_{selected_col}.png")
             plt.close(fig)
+
+            insight = summarize_visuals(
+                "Box Plot",
+                stats_numeric(df[selected_col]),
+                st.session_state.dataset_summary,
+                st.session_state.global_stats
+            )
+            st.info(insight)
 
         elif chart_type == "Violin Plot":
             fig, ax = plt.subplots()
@@ -96,10 +93,34 @@ def visualize_data(df):
             download_chart(fig, f"violin_{selected_col}.png")
             plt.close(fig)
 
+            insight = summarize_visuals(
+                "Violin Plot",
+                stats_numeric(grouped),
+                st.session_state.dataset_summary,
+                st.session_state.global_stats
+            )
+            st.info(insight)
+
+    # ---- Categorical column charts --- 
     elif selected_col in categorical_cols:
         chart_type = st.selectbox("Chart Type", ["Bar Chart", "Pie Chart"])
+        n_classes = df[selected_col].nunique()
+        CATEGORY_LIMIT = 20
 
-        if chart_type == "Bar Chart":
+        if n_classes > CATEGORY_LIMIT:
+            st.warning(
+                f"`{selected_col}` has {n_classes} distinct values — too many to "
+                f"plot clearly. Showing only an AI summary of the value distribution instead."
+            )
+            insight = summarize_visuals(
+                chart_type,
+                stats_categorical(df[selected_col]),
+                st.session_state.dataset_summary,
+                st.session_state.global_stats
+            )
+            st.info(insight)
+
+        elif chart_type == "Bar Chart":
             fig, ax = plt.subplots()
             counts = df[selected_col].value_counts()
             bars = counts.plot(kind="bar", ax=ax, color="steelblue")
@@ -113,6 +134,14 @@ def visualize_data(df):
             st.pyplot(fig)
             download_chart(fig, f"barchart_{selected_col}.png")
             plt.close(fig)
+
+            insight = summarize_visuals(
+                "Bar Chart",
+                stats_categorical(df[selected_col]),
+                st.session_state.dataset_summary,
+                st.session_state.global_stats
+            )
+            st.info(insight)
 
         elif chart_type == "Pie Chart":
             fig, ax = plt.subplots()
@@ -130,6 +159,14 @@ def visualize_data(df):
             download_chart(fig, f"piechart_{selected_col}.png")
             plt.close(fig)
 
+            insight = summarize_visuals(
+                "Pie Chart",
+                stats_categorical(df[selected_col]),
+                st.session_state.dataset_summary,
+                st.session_state.global_stats
+            )
+            st.info(insight)
+
     if selected_col in datetime_cols:
         chart_type = st.selectbox("Chart Type", ["Line Chart", "Area Chart"])
         data_over_time = df.set_index(selected_col).resample("ME").size()
@@ -145,6 +182,14 @@ def visualize_data(df):
             download_chart(fig, f"linechart_{selected_col}.png")
             plt.close(fig)
 
+            insight = summarize_visuals(
+                "Line Chart",
+                stats_time(df[selected_col]),
+                st.session_state.dataset_summary,
+                st.session_state.global_stats
+            )
+            st.info(insight)
+
         elif chart_type == "Area Chart":
             fig, ax = plt.subplots(figsize=(12, 4))
             data_over_time.plot(kind="area", ax=ax, color="steelblue", alpha=0.4, label="Record Count")
@@ -156,6 +201,14 @@ def visualize_data(df):
             download_chart(fig, f"areachart_{selected_col}.png")
             plt.close(fig)
 
+            insight = summarize_visuals(
+                "Area chart",
+                stats_time(df[selected_col]),
+                st.session_state.dataset_summary,
+                st.session_state.global_stats
+            )
+            st.info(insight)
+
     # --- Numeric vs Categorical ---
     if numeric_cols and categorical_cols:
         st.markdown("---")
@@ -164,7 +217,24 @@ def visualize_data(df):
         cat_col = st.selectbox("Categorical column", categorical_cols, key="num_cat_cat")
         chart_type2 = st.selectbox("Chart Type", ["Grouped Bar Chart", "Violin by Category"], key="num_cat_chart")
 
-        if chart_type2 == "Grouped Bar Chart":
+        n_classes = df[cat_col].nunique()
+        CATEGORY_LIMIT = 20
+
+        if n_classes > CATEGORY_LIMIT:
+            st.warning(
+                f"`{cat_col}` has {n_classes} distinct values — too many to "
+                f"plot clearly. Showing only an AI summary instead."
+            )
+            grouped = df.groupby(cat_col)[num_col].mean()
+            insight = summarize_visuals(
+                chart_type2,
+                stats_grouped(grouped),
+                st.session_state.dataset_summary,
+                st.session_state.global_stats
+            )
+            st.info(insight)
+
+        elif chart_type2 == "Grouped Bar Chart":
             fig, ax = plt.subplots(figsize=(10, 5))
             grouped = df.groupby(cat_col)[num_col].mean()
             grouped.plot(kind="bar", ax=ax, color=sns.color_palette("Set2", len(grouped)))
@@ -175,11 +245,18 @@ def visualize_data(df):
             ax.bar_label(ax.containers[0], fmt="%.2f")
             palette = sns.color_palette("Set2", len(grouped))
             handles = [mpatches.Patch(color=palette[i], label=cat)
-                       for i, cat in enumerate(grouped.index)]
-        #    for i, cat in enumerate(grouped.index)]
+                    for i, cat in enumerate(grouped.index)]
             st.pyplot(fig)
             download_chart(fig, f"groupedbar_{num_col}_by_{cat_col}.png")
             plt.close(fig)
+
+            insight = summarize_visuals(
+                "Grouped Bar Chart",
+                stats_grouped(grouped),
+                st.session_state.dataset_summary,
+                st.session_state.global_stats
+            )
+            st.info(insight)
 
         elif chart_type2 == "Violin by Category":
             fig, ax = plt.subplots(figsize=(10, 5))
@@ -189,34 +266,23 @@ def visualize_data(df):
             ax.set_ylabel(num_col)
             palette = sns.color_palette("Set2", len(df[cat_col].unique()))
             handles = [mpatches.Patch(color=palette[i], label=cat)
-                       for i, cat in enumerate(df[cat_col].unique())]
-        #    for i, cat in enumerate(df[cat_col].unique())]
+                    for i, cat in enumerate(df[cat_col].unique())]
             plt.xticks(rotation=45)
             st.pyplot(fig)
             download_chart(fig, f"violin_{num_col}_by_{cat_col}.png")
             plt.close(fig)
 
-    # --- Two Numerics ---
-    if len(numeric_cols) >= 2:
-        st.markdown("---")
-        st.markdown("#### Two Numeric Columns")
-        col1 = st.selectbox("X axis", numeric_cols, key="x_col")
-        col2 = st.selectbox("Y axis", numeric_cols, key="y_col")
-        chart_type3 = st.selectbox("Chart Type", ["Regression Plot"], key="two_num_chart")
-        if col1 != col2:
-                fig, ax = plt.subplots()
-                sns.regplot(x=df[col1], y=df[col2], ax=ax, color="steelblue",
-                            line_kws={"color": "red", "label": "Regression Line"},
-                            scatter_kws={"label": f"{col1} vs {col2}"})
-                ax.set_title(f"Regression Plot: {col1} vs {col2}")
-                ax.set_xlabel(col1)
-                ax.set_ylabel(col2)
-                ax.legend()
-                st.pyplot(fig)
-                download_chart(fig, f"regression_{col1}_vs_{col2}.png")
-                plt.close(fig)
-        else:
-            st.warning("Please select two different columns.")
+            grouped = df.groupby(cat_col)[num_col].mean()
+            insight = summarize_visuals(
+                "Violin by category",
+                stats_grouped(grouped),
+                st.session_state.dataset_summary,
+                st.session_state.global_stats
+            )
+            st.info(insight)
+
+    else:
+        st.warning("Please select two different columns.")
 
     # --- Correlation Heatmap ---
     if len(numeric_cols) >= 2:
@@ -228,6 +294,14 @@ def visualize_data(df):
         st.pyplot(fig)
         download_chart(fig, "correlation_heatmap.png")
         plt.close(fig)
+
+        insight = summarize_visuals(
+                "Correlation Heatmap",
+                stats_corr_matrix(df[numeric_cols].corr()),
+                st.session_state.dataset_summary,
+                st.session_state.global_stats
+            )
+        st.info(insight)
 
     
 

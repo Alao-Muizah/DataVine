@@ -1,15 +1,25 @@
 import streamlit as st
 import pandas as pd
+from modules.summarizer import summarize_dataset
 
 def inspect_data(df):
+
+    # --- Shape ---
+    st.markdown("#### Shape")
+    st.write(f"Rows: {df.shape[0]}  |  Columns: {df.shape[1]}")
 
     # --- Dataset Preview ---
     st.markdown("#### Dataset Preview")
     st.dataframe(df.head(10))
 
-    # --- Shape ---
-    st.markdown("#### Shape")
-    st.write(f"Rows: {df.shape[0]}  |  Columns: {df.shape[1]}")
+    # --- AI Dataset Summary ---
+    st.markdown("####  AI Dataset Summary")
+    fingerprint = (tuple(df.columns), df.shape)
+    if st.session_state.get("summary_fingerprint") != fingerprint:
+        with st.spinner("Summarizing dataset..."):
+            st.session_state.dataset_summary = summarize_dataset(df)
+            st.session_state.summary_fingerprint = fingerprint
+    st.info(st.session_state.dataset_summary)
 
     # --- Column Types Grouped ---
     st.markdown("#### Column Types")
@@ -60,5 +70,6 @@ def inspect_data(df):
     # --- Summary Statistics ---
     st.markdown("#### Summary Statistics")
     st.dataframe(df.describe())
+    st.session_state.global_stats = df.describe(include="all").to_dict()
 
 

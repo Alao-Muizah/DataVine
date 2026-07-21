@@ -23,9 +23,9 @@ def clean_data(df):
 
     # --- Detect high cardinality object columns ---
     high_cardinality_cols = [
-        col for col in df.columns
-        if df[col].dtype == "object"
-        and df[col].nunique() == len(df)
+    col for col in df.columns
+    if df[col].dtype == "object"
+    and df[col].nunique() > 20
     ]
 
     # --- Detect identifier columns ---
@@ -54,37 +54,31 @@ def clean_data(df):
     st.markdown("#### Step 2: Your Decisions")
     user_decisions = {}
 
-    # --- Identifier columns ---
-    if identifier_cols:
-        st.markdown("** Identifier Columns**")
-        for col in identifier_cols:
-            action = st.radio(
-                f"`{col}` — looks like an identifier",
-                ["Drop", "Keep"],
-                horizontal=True,
-                key=f"id_{col}"
-            )
-            user_decisions[col] = {"type": "identifier", "action": action}
-        st.markdown("---")
+    # --- Identifier / High Cardinality Columns ---
+    flagged_cols = list(dict.fromkeys(identifier_cols + high_cardinality_cols))  # union, no duplicates, order preserved
 
-    # --- High cardinality columns ---
-    if high_cardinality_cols:
-        st.markdown("** High Cardinality Columns**")
-        for col in high_cardinality_cols:
-            if col in identifier_cols:
-                continue
+    if flagged_cols:
+        st.markdown("Identifier / High Cardinality Columns")
+        for col in flagged_cols:
+            if col in identifier_cols and col in high_cardinality_cols:
+                reason = f"looks like an identifier, {df[col].nunique()} unique values"
+            elif col in identifier_cols:
+                reason = "looks like an identifier"
+            else:
+                reason = f"{df[col].nunique()} unique values, every row is different"
+
             action = st.radio(
-                f"`{col}` — {df[col].nunique()} unique values, every row is different",
+                f"`{col}` — {reason}",
                 ["Drop", "Keep"],
                 horizontal=True,
-                key=f"hc_{col}"
+                key=f"flag_{col}"
             )
-            user_decisions[col] = {"type": "high_cardinality", "action": action}
+            user_decisions[col] = {"type": "identifier_or_high_cardinality", "action": action}
         st.markdown("---")
 
     # --- Missing value columns ---
     if missing_cols:
-        st.markdown("** Missing Value Columns**")
+        st.markdown("Missing Value Columns")
         for col, count in missing_cols.items():
             pct = round(count / len(df) * 100, 1)
             st.markdown(f"`{col}` — **{count} missing values** ({pct}% of rows)")
@@ -126,7 +120,6 @@ def clean_data(df):
             }
             st.markdown("---")
 
-    st.divider()
 
     # ============================================================
     # STEP 3: APPLY CLEANING
