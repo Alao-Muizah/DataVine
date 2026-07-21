@@ -14,13 +14,14 @@ DataVine is a web-based data platform that enables users to upload, clean, visua
 
 ## Workflow
 
-```
+``` 
 Upload Dataset → Inspect → Clean → Visualize → Train Model → Export Results
 ```
 
 ### 1. Upload
 - Supports CSV and Excel (.xlsx) files
 - Instant preview on upload
+- Automatic encoding fallback (UTF-8 → cp1252) for files that fail standard decoding
 
 ### 2. Inspect
 - Dataset shape (rows × columns)
@@ -28,17 +29,16 @@ Upload Dataset → Inspect → Clean → Visualize → Train Model → Export Re
 - Missing value counts and percentages
 - Duplicate row detection
 - Summary statistics
+- **AI-generated dataset summary** — a short description of what the dataset represents, inferred from its structure and a sample of rows
 
 ### 3. Clean
 DataVine scans your dataset before touching anything and reports:
 - Columns with missing values
-- High cardinality columns (unique identifiers)
-- Identifier columns (emails, phone numbers, IDs)
+- High cardinality / identifier columns (unified into one section — unique IDs, emails, phone numbers, etc.)
 
 For each issue, you decide:
 - **Missing values** → Fill (Median / Mean / Mode / Custom) or Drop rows
-- **High cardinality** → Drop or Keep
-- **Identifiers** → Drop or Keep
+- **High cardinality / Identifiers** → Drop or Keep
 
 Nothing is changed until you click **Apply Cleaning**.
 
@@ -53,7 +53,7 @@ Automated chart generation based on column types:
 | Two Numerics | Regression Plot |
 | All Numerics | Correlation Heatmap |
 
-Every chart includes a download button.
+Every chart includes a download button and an **AI-generated insight** summarizing the trend or pattern shown — grounded in the chart's actual computed statistics, not the image itself. Categorical columns with too many distinct values to plot clearly (20+) automatically fall back to an AI summary of the distribution instead of an unreadable chart.
 
 ### 5. Train
 Select a task and train a model on your cleaned data:
@@ -76,7 +76,7 @@ Select a task and train a model on your cleaned data:
 - K-Means
 - DBSCAN
 - Hierarchical (Agglomerative)
-  
+
 
 Each model includes hyperparameter tuning, performance metrics, feature importance charts, and a downloadable trained model (.pkl).
 
@@ -98,6 +98,7 @@ Each model includes hyperparameter tuning, performance metrics, feature importan
 | Visualization | Matplotlib, Seaborn |
 | Machine Learning | Scikit-learn, XGBoost |
 | Model Serialization | Joblib |
+| AI Summaries | Groq (llama-3.1-8b-instant) |
 
 ---
 
@@ -116,15 +117,14 @@ source venv/bin/activate  # Mac/Linux
 # Install dependencies
 pip install -r requirements.txt
 
+# Set up your Groq API key
+# Local: create a .env file with GROQ_API_KEY=your_key_here
+# Streamlit Cloud: add GROQ_API_KEY under Settings → Secrets
+
 # Run the app
 streamlit run app.py
 ```
 
----
-
-## Project Structure
-
-```
 DataVine/
 │
 ├── app.py                  # Main Streamlit entry point
@@ -132,21 +132,25 @@ DataVine/
 ├── README.md
 │
 └── modules/
-    ├── loader.py           # File upload and loading
-    ├── inspector.py        # Data inspection
-    ├── cleaner.py          # Data cleaning pipeline
-    ├── visualizer.py       # Chart generation
-    ├── trainer.py          # Task router
-    ├── regression.py       # Regression models
-    ├── classification.py   # Classification models      
-    └── clustering.py       # Clustering models
-```
+├── loader.py           # File upload and loading
+├── inspector.py        # Data inspection
+├── cleaner.py          # Data cleaning pipeline
+├── visualizer.py       # Chart generation
+├── summarizer.py       # AI dataset and chart summaries (Groq)
+├── trainer.py          # Task router
+├── regression.py       # Regression models
+├── classification.py   # Classification models
+└── clustering.py       # Clustering models
+
+---
+
+## Project Structure
 
 ---
 
 ## Status
 
-Active development — v1.0
+Active development — v2.0
 
 ---
 
