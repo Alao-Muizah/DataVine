@@ -124,7 +124,10 @@ pip install -r requirements.txt
 # Run the app
 streamlit run app.py
 ```
+---
 
+## Project Structure
+```
 DataVine/
 │
 ├── app.py                  # Main Streamlit entry point
@@ -142,9 +145,7 @@ DataVine/
 ├── classification.py   # Classification models
 └── clustering.py       # Clustering models
 
----
-
-## Project Structure
+```
 
 ---
 
