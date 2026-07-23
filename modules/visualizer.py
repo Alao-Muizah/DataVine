@@ -92,10 +92,10 @@ def visualize_data(df):
             st.pyplot(fig)
             download_chart(fig, f"violin_{selected_col}.png")
             plt.close(fig)
-
+        
             insight = summarize_visuals(
                 "Violin Plot",
-                stats_numeric(grouped),
+                stats_numeric(df[selected_col]),
                 st.session_state.dataset_summary,
                 st.session_state.global_stats
             )
